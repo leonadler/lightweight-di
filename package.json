@@ -1,0 +1,44 @@
+{
+  "name": "lightweight-di",
+  "version": "0.1.0",
+  "description": "Lightweight dependency injection for TypeScript and JavaScript",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "test": "mocha --require ts-node/register --require source-map-support/register src/**/*.spec.ts",
+    "watch": "tsc -p tsconfig.build.json -w",
+    "watch-tests": "TS_NODE_CACHE=false mocha --compilers ts:ts-node/register --require source-map-support/register src/**/*.spec.ts --reporter min --watch"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/leonadler/lightweight-di.git"
+  },
+  "keywords": [
+    "dependency injection",
+    "dependency",
+    "injection",
+    "di",
+    "typescript",
+    "decorators"
+  ],
+  "author": "Leon Adler <git@leon-adler.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/leonadler/lightweight-di/issues"
+  },
+  "homepage": "https://github.com/leonadler/lightweight-di#readme",
+  "devDependencies": {
+    "@types/chai": "^4.0.0",
+    "@types/mocha": "^2.2.41",
+    "chai": "^4.0.2",
+    "mocha": "^3.4.2",
+    "source-map-support": "^0.4.15",
+    "ts-node": "^3.0.6",
+    "typescript": "^2.3.4",
+    "watch-run": "^1.2.5"
+  },
+  "dependencies": {
+    "reflect-metadata": "^0.1.10",
+    "tslib": "^1.7.1"
+  }
+}

@@ -1,0 +1,16 @@
+{
+    "compilerOptions": {
+        "emitDecoratorMetadata": true,
+        "experimentalDecorators": true,
+        "importHelpers": true,
+        "module": "commonjs",
+        "noImplicitAny": true,
+        "outDir": "dist",
+        "rootDir": "src",
+        "strict": true,
+        "target": "es2016"
+    },
+    "exclude": [
+        "node_modules"
+    ]
+}

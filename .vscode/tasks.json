@@ -1,0 +1,97 @@
+{
+    "version": "0.1.0",
+    "tasks": [
+        {
+            "taskName": "build",
+            "command": "node",
+            "isBuildCommand": true,
+            "args": [
+                "node_modules/typescript/bin/tsc",
+                "-p",
+                "tsconfig.build.json"
+            ],
+            "showOutput": "silent",
+            "problemMatcher": "$tsc"
+        },
+        {
+            "taskName": "watch",
+            "command": "node",
+            "isBackground": true,
+            "args": [
+                "node_modules/typescript/bin/tsc",
+                "-p",
+                "tsconfig.build.json",
+                "-w"
+            ],
+            "showOutput": "silent",
+            "problemMatcher": "$tsc-watch"
+        },
+        {
+            "taskName": "run tests",
+            "command": "node",
+            "isTestCommand": true,
+            "args": [
+                "node_modules/mocha/bin/mocha",
+                "--require",
+                "ts-node/register",
+                "--require",
+                "source-map-support/register",
+                "--reporter",
+                "tap",
+                "--no-colors",
+                "src/**/*.spec.ts"
+            ],
+            "showOutput": "never",
+            "problemMatcher": {
+                "owner": "mocha",
+                "fileLocation": [
+                    "relative",
+                    "${workspaceRoot}"
+                ],
+                "pattern": [
+                    {
+                        "regexp": "^not\\sok\\s\\d+\\s(.*)$"
+                    },
+                    {
+                        "regexp": "\\s+(.*)$",
+                        "message": 1
+                    },
+                    {
+                        "regexp": "\\s+at\\s(.*)\\s\\((.*):(\\d+):(\\d+)\\)",
+                        "file": 2,
+                        "line": 3,
+                        "column": 4
+                    }
+                ]
+            }
+        },
+        {
+            "taskName": "watch tests",
+            "command": "node",
+            "isBackground": true,
+            "showOutput": "silent",
+            "options": {
+                "env": {
+                    "TS_NODE_CACHE": "false"
+                }
+            },
+            "args": [
+                "node_modules/watch-run/bin/watch",
+                "--pattern",
+                "src/**,tsconfig.json,tsconfig.build.json",
+                "--initial",
+                "--",
+                "node",
+                "node_modules/mocha/bin/mocha",
+                "--compilers",
+                "ts:ts-node/register",
+                "--require",
+                "source-map-support/register",
+                "--reporter",
+                "tap",
+                "--no-colors",
+                "src/**/*.spec.ts"
+            ]
+        }
+    ]
+}
