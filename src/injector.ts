@@ -1,6 +1,7 @@
 import { Injectable } from './injectable';
 import { Provider, Type } from './provider';
 import { InjectionToken } from './injection-token';
+import { InjectionError } from './injection-error';
 
 interface Factory {
     factory(...args: any[]): any;
@@ -11,108 +12,113 @@ interface Factory {
 export class Injector {
     private factories: Map<any, Factory> = new Map();
     private resolved: Map<any, any> = new Map();
+    private parentInjector: Injector | undefined;
 
+    /**
+     * Create a child injector that inherits all factories and resolved values.
+     * Providers may be added and dependencies overridden without effecting the parent injector.
+     */
     createChildInjector(): Injector {
         const childInjector = new Injector();
+        childInjector.parentInjector = this;
         childInjector.factories = new Map(this.factories);
+        childInjector.factories.set(Injector, { factory: () => childInjector, dependencies: [] });
+        childInjector.resolved.set(Injector, childInjector);
         return childInjector;
     }
 
-    overrideDependency(token: any, value: any): void {
-        this.factories.set(token, value);
+    /** Override a dependency token for unit tests */
+    overrideDependency(token: Type<any> | InjectionToken<any>, value: any): void {
+        this.factories.set(token, { factory: () => value, dependencies: [] });
+        this.resolved.set(token, value);
     }
 
     get<T>(token: Type<T>): T;
     get<T>(token: InjectionToken<T>): T;
-    get(token: any): any {
+    get<T, U>(token: Type<T>, notFoundValue: U): T | U;
+    get<T, U>(token: InjectionToken<T>, notFoundValue: U): T | U;
+    get(token: any, notFoundValue?: any): any {
         if (this.resolved.has(token)) {
             return this.resolved.get(token);
         }
 
         if (this.factories.has(token)) {
             const factory = this.factories.get(token)!;
-            const dependencies = factory.dependencies.map(d => this.get(d));
+            const dependencies = factory.dependencies.map(dep => this.get(dep));
             const resolvedValue = factory.factory(...dependencies);
             this.resolved.set(token, resolvedValue);
             return resolvedValue;
         }
 
-        const name = typeof token === 'function' ? token.name : token.toString();
-        throw new Error(`InjectionError: No provider for ${name}.`);
+        if (token === Injector) {
+            return this;
+        }
+
+        if (arguments.length > 1) {
+            return notFoundValue;
+        }
+
+        throw new InjectionError(`InjectionError: No provider for ${tokenName(token)}.`, token);
     }
 
-    static resolveAndCreate(providers: Provider<any>[]): Injector {
-        // First, create a list of all passed dependencies
-        const definedDependencies = new Set<any>([Injector]);
-        for (const provider of providers as any[]) {
-            if (provider && provider.provide && !provider.prototype) {
-                // Provider is passed as { provide: ... } hash
-                definedDependencies.add(provider.provide);
-            } else if (provider && provider.prototype && provider.prototype.constructor === provider) {
-                // Provider is a class
-                definedDependencies.add(provider);
-            } else {
-                throw new Error(`Invalid provider: ${provider}`);
-            }
+    static isValidProvider(input: any): input is Provider<any> {
+        if (typeof input === 'function' && input.prototype && input.prototype.constructor === input) {
+            return true;
+        } else if (typeof input === 'object' && input && input.provide) {
+            return true;
+        } else {
+            return false;
         }
+    }
+
+    /**
+     * Resolve the all dependencies of the passed providers as dependency tree
+     * and return an injector that creates and returns instances of the dependencies.
+     *
+     * All classes that are not explicitly provided are resolved to the class itself,
+     * missing InjectionToken providers throw an exception.
+     *
+     * @example
+     *     const injector = Injector.autoResolveAndCreate([App]);
+     */
+    static autoResolveAndCreate(providers: Provider<any>[]): Injector {
+        validateProviders(providers);
 
         const injector = new Injector();
-        const factories = injector.factories;
+        const factories = injector.factories = factoriesFromProviders(providers);
+        const dependencies = Array.from(factories.keys());
+        throwOnCircularDependencies(dependencies, factories, []);
+        addMissingClassDependencies(dependencies, factories);
+        throwOnCircularDependencies(dependencies, factories, []);
+        throwOnMissingDependencies(dependencies, factories);
 
-        // Provide the injector itself
-        factories.set(Injector, { factory: () => injector, dependencies: [] });
-        injector.resolved.set(Injector, injector);
+        return injector;
+    }
 
-        // Now for all providers, check if their dependencies are in the created list
-        // and normalize their format to a { factory, dependencies } hash.
-        for (const provider of providers as any[]) {
-            const token: any = provider.provide;
+    /**
+     * Resolve the passed providers as dependency tree and return an injector
+     * that creates and returns instances of the dependencies.
+     *
+     * Providers for all nested dependencies need to be in the input array.
+     *
+     * @example
+     *     const injector = Injector.resolveAndCreate([App, Dependency1, Dependency2]);
+     */
+    static resolveAndCreate(providers: Provider<any>[]): Injector {
+        validateProviders(providers);
 
-            if (provider == null) {
-                throw injectionError(`Invalid provider ${provider}.`, provider);
-            } else if (!token && provider.prototype && provider.prototype.constructor === provider) {
-                // Provider is a class
-                const dependencies = getDiTokens(provider);
-                factories.set(provider, {
-                    factory: (...args: any[]) => new provider(...args),
-                    dependencies
-                });
-            } else if (!token) {
-                throw injectionError(`Invalid provider ${provider}.`, provider);
-            } else if ('useValue' in provider) {
-                // Provider is a { provide: ClassName, useValue: ... } object
-                const valueToUse = provider.useValue;
-                factories.set(token, {
-                    factory: () => valueToUse,
-                    dependencies: []
-                });
-                injector.resolved.set(token, valueToUse);
-            } else if ('useFactory' in provider) {
-                // Provider is a { provide: ClassName, useFactory: ... } object
-                factories.set(token, {
-                    factory: provider.useFactory,
-                    dependencies: provider.dependencies || []
-                });
-            } else if ('useClass' in provider) {
-                // Provider is a { provide: ClassName, useClass: ... } object
-                const classToUse = provider.useClass;
-                factories.set(token, {
-                    factory: (...args: any[]) => new classToUse(...args),
-                    dependencies: provider.dependencies || getDiTokens(classToUse)
-                });
-            }
-        }
-
-        validateDependencyTree(Array.from(factories.keys()), factories, []);
+        const injector = new Injector();
+        const factories = injector.factories = factoriesFromProviders(providers);
+        const dependencies = Array.from(factories.keys());
+        throwOnCircularDependencies(dependencies, factories, []);
+        throwOnMissingDependencies(dependencies, factories);
 
         return injector;
     }
 }
 
-function injectionError(message: string, token: any): Error {
-    let error = new Error('InjectionError: ' + message);
-    (error as any).token = token;
-    return error;
+function tokenName(token: any): string {
+    return token && token.name || String(token);
 }
 
 function getDiTokens(classConstructor: Function): any[] {
@@ -122,21 +128,99 @@ function getDiTokens(classConstructor: Function): any[] {
     } else if (!classConstructor.length) {
         return [];
     }
-    throw injectionError('Class with dependencies is provided but not decorated with @Injectable or @Inject', classConstructor);
+    throw new InjectionError('Class with dependencies is provided but not decorated with @Injectable or @Inject', classConstructor);
 }
 
-/** Throws on missing dependencies or circular dependencies */
-function validateDependencyTree(dependencies: any[], factories: Map<any, Factory>, dependents: any[]): void {
-    for (const dependency of dependencies) {
-        const name = dependency.name || String(dependency);
+/** Normalize providers to a `{ factory, dependencies }` hash. */
+function factoriesFromProviders(providers: Provider<any>[]) {
+    const factories = new Map<any, any>();
 
+    for (const provider of providers as any[]) {
+        const token: any = provider.provide;
+
+        if (!token && provider.prototype && provider.prototype.constructor === provider) {
+            // Provider is a class
+            const dependencies = getDiTokens(provider);
+            factories.set(provider, {
+                factory: (...args: any[]) => new provider(...args),
+                dependencies
+            });
+        } else if ('useValue' in provider) {
+            // Provider is a { provide: ClassName, useValue: ... } object
+            const valueToUse = provider.useValue;
+            factories.set(token, {
+                factory: () => valueToUse,
+                dependencies: []
+            });
+        } else if ('useFactory' in provider) {
+            // Provider is a { provide: ClassName, useFactory: ... } object
+            factories.set(token, {
+                factory: provider.useFactory,
+                dependencies: provider.dependencies || []
+            });
+        } else if ('useClass' in provider) {
+            // Provider is a { provide: ClassName, useClass: ... } object
+            const classToUse = provider.useClass;
+            factories.set(token, {
+                factory: (...args: any[]) => new classToUse(...args),
+                dependencies: provider.dependencies || getDiTokens(classToUse)
+            });
+        }
+    }
+
+    return factories;
+}
+
+/** Throw if a provider is not a class or a `{ provide: ... }` hash */
+function validateProviders(providers: Provider<any>[]) {
+    for (const p of providers as any[]) {
+        if (!Injector.isValidProvider(p)) {
+            throw new Error(`Invalid provider: ${p}`);
+        }
+    }
+}
+
+function throwOnCircularDependencies(dependencies: any[], factories: Map<any, Factory>, dependents: any[]): void {
+    for (const dependency of dependencies) {
         if (dependents.includes(dependency)) {
-            throw injectionError(`Circular dependency: "${name}" is required by one of its dependencies.`, dependency);
-        } else if (!factories.has(dependency)) {
-            throw injectionError(`No provider for "${name}".`, dependency);
+            throw new InjectionError(`Circular dependency: "${tokenName(dependency)}" is required by one of its dependencies.`, dependency);
+        }
+
+        const factory = factories.get(dependency);
+        if (factory) {
+            throwOnCircularDependencies(factory.dependencies, factories, [...dependents, dependency]);
+        }
+    }
+}
+
+function throwOnMissingDependencies(dependencies: any[], factories: Map<any, Factory>): void {
+    for (const dependency of dependencies) {
+        if (!factories.has(dependency)) {
+            throw new InjectionError(`No provider for "${tokenName(dependency)}".`, dependency);
         }
 
         const factory = factories.get(dependency)!;
-        validateDependencyTree(factory.dependencies, factories, [...dependents, dependency]);
+        throwOnMissingDependencies(factory.dependencies, factories);
+    }
+}
+
+function addMissingClassDependencies(dependencies: any[], factories: Map<any, Factory>): void {
+    for (const dependency of dependencies) {
+        let factory = factories.get(dependency);
+        if (!factory) {
+            if (typeof dependency === 'function' && dependency.prototype && dependency.prototype.constructor === dependency) {
+                // dependency is a class constructor, add a factory for it
+                const classDependencies = getDiTokens(dependency);
+                factories.set(dependency, factory = {
+                    factory: (...args: any[]) => new dependency(...args),
+                    dependencies: classDependencies
+                });
+            } else {
+                // dependency is an InjectionToken
+                throw new InjectionError(`No provider for "${tokenName(dependency)}".`, dependency);
+            }
+        }
+
+        addMissingClassDependencies(factory.dependencies, factories);
     }
 }
