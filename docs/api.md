@@ -46,6 +46,76 @@ const injector = Injector.resolveAndCreate([ClassWithDependencies, Dependency1, 
 const instance = injector.get(ClassWithDependencies);
 ```
 
+### `static autoResolveAndCreate(providers)`
+
+Resolves a passed array of providers to a dependency tree. Class dependencies which are not
+provided explicitly are resolved automatically, injection tokens must be provided.
+Throws an exception for cyclic dependencies or missing token providers.
+
+```typescript
+class DependencyA {
+}
+
+class DependencyB {
+    constructor(@Inject a: DependencyA) { }
+}
+
+class DependencyC {
+    constructor(@Inject b: DependencyB) { }
+}
+
+const LANGUAGE = new InjectionToken<string>('LANGUAGE');
+
+class App {
+    constructor(@Inject c: DependencyC, @Inject(LANGUAGE) lang: string) { }
+}
+
+const injector = Injector.autoResolveAndCreate([
+    App,
+    { provide: LANGUAGE, useValue: 'en' }
+]);
+```
+
+
+### `static resolveAndCreate(providers)`
+
+Resolves a passed array of providers to a dependency tree. All dependencies and nested dependencies
+must be provided explicitly. Throws an exception for cyclic dependencies or missing providers.
+
+```typescript
+class DependencyA {
+}
+
+class DependencyB {
+    constructor(@Inject a: DependencyA) { }
+}
+
+class DependencyC {
+    constructor(@Inject b: DependencyB) { }
+}
+
+const LANGUAGE = new InjectionToken<string>('LANGUAGE');
+
+class App {
+    constructor(@Inject c: DependencyC, @Inject(LANGUAGE) lang: string) { }
+}
+
+const injector = Injector.resolveAndCreate([
+    App,
+    DependencyA,
+    DependencyB,
+    DependencyC,
+    { provide: LANGUAGE, useValue: 'en' }
+]);
+```
+
+
+### `get(class | token, notFoundValue?)`
+
+Resolves a provider token and returns the instance for that token. If no matching factory is found,
+a provided `notFoundValue` is returned, an `InjectionError` thrown otherwise.
+
+
 ## Types of injection tokens
 
 Dependencies can be marked by providing a class or an InjectionToken.
