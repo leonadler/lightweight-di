@@ -180,6 +180,73 @@ describe('Injector', () => {
 
     });
 
+    describe('createChildInjector()', () => {
+
+        it('creates an injector with factories for the tokens of the parent injector', () => {
+            class TestService { }
+
+            const parent = Injector.resolveAndCreate([TestService]);
+            const child = parent.createChildInjector([]);
+            const instance = child.get(TestService);
+
+            expect(instance).to.be.an.instanceof(TestService);
+        });
+
+        it('creates new instances for tokens provided with the call', () => {
+            class TestService { }
+
+            const parent = Injector.resolveAndCreate([TestService]);
+            const child = parent.createChildInjector([TestService]);
+            const parentInstance = parent.get(TestService);
+            const childInstance = child.get(TestService);
+
+            expect(parentInstance).not.to.equal(childInstance);
+            expect(childInstance).to.be.an.instanceof(TestService);
+        });
+
+        it('returns the same instances as the parent injector for all other tokens', () => {
+            class TestService { }
+
+            const parent = Injector.resolveAndCreate([TestService]);
+            const child = parent.createChildInjector([]);
+            const parentInstance = parent.get(TestService);
+            const childInstance = child.get(TestService);
+
+            expect(parentInstance).to.equal(childInstance);
+            expect(childInstance).to.be.an.instanceof(TestService);
+        });
+
+        it('can be used to create a injector hierarchy', () => {
+            class TestService { }
+
+            const parent = Injector.resolveAndCreate([TestService]);
+            const firstChild = parent.createChildInjector([TestService]);
+            const secondChild = parent.createChildInjector([TestService]);
+            const grandChild = secondChild.createChildInjector([]);
+            const a = parent.get(TestService);
+            const b = firstChild.get(TestService);
+            const c = secondChild.get(TestService);
+            const d = grandChild.get(TestService);
+
+            expect(b).not.to.equal(a);
+            expect(c).not.to.equal(b);
+            expect(c).to.be.an.instanceof(TestService);
+            expect(d).to.equal(c);
+        });
+
+        it('throws if created for tokens which are not provided in a parent injector', () => {
+            class TestService { }
+
+            const parent = Injector.resolveAndCreate([]);
+            function create() {
+                parent.createChildInjector([TestService]);
+            }
+
+            expect(create).to.throw('No provider for TestService');
+        });
+
+    });
+
     describe('get()', () => {
 
         describe('with classes', () => {

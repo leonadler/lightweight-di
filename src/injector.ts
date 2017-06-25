@@ -17,11 +17,27 @@ export class Injector {
     /**
      * Create a child injector that inherits all factories and resolved values.
      * Providers may be added and dependencies overridden without effecting the parent injector.
+     *
+     * @param tokensToProvide An array of tokens the child injector should construct locally.
      */
-    createChildInjector(): Injector {
+    createChildInjector(tokensToProvide: Array<Type<any>|InjectionToken<any>>): Injector {
         const childInjector = new Injector();
         childInjector.parentInjector = this;
-        childInjector.factories = new Map(this.factories);
+        childInjector.factories = new Map();
+
+        for (const token of tokensToProvide) {
+            let injector: Injector | undefined = this;
+            while (injector && !injector.factories.has(token)) {
+                injector = injector.parentInjector;
+            }
+
+            if (!injector) {
+                throw new InjectionError(`InjectionError: No provider for ${tokenName(token)}.`, token);
+            }
+            const factory = injector.factories.get(token)!;
+            childInjector.factories.set(token, factory);
+        }
+
         childInjector.factories.set(Injector, { factory: () => childInjector, dependencies: [] });
         childInjector.resolved.set(Injector, childInjector);
         return childInjector;
@@ -42,17 +58,27 @@ export class Injector {
             return this.resolved.get(token);
         }
 
-        if (this.factories.has(token)) {
-            const factory = this.factories.get(token)!;
-            const dependencies = factory.dependencies.map(dep => this.get(dep));
-            const resolvedValue = factory.factory(...dependencies);
-            this.resolved.set(token, resolvedValue);
-            return resolvedValue;
-        }
-
         if (token === Injector) {
             return this;
         }
+
+        let injector: Injector = this;
+        do {
+            if (injector.resolved.has(token)) {
+                const resolvedValue = injector.resolved.get(token);
+                this.resolved.set(token, resolvedValue);
+                return resolvedValue;
+            }
+
+            if (injector.factories.has(token)) {
+                const factory = injector.factories.get(token)!;
+                const dependencies = factory.dependencies.map(dep => injector!.get(dep));
+                const resolvedValue = factory.factory(...dependencies);
+                injector.resolved.set(token, resolvedValue);
+                this.resolved.set(token, resolvedValue);
+                return resolvedValue;
+            }
+        } while (injector = injector.parentInjector!);
 
         if (arguments.length > 1) {
             return notFoundValue;
