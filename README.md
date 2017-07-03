@@ -1,6 +1,7 @@
 # Lightweight Dependency Injection
 
 [![npm version](https://badge.fury.io/js/lightweight-di.svg)](https://badge.fury.io/js/lightweight-di)
+[![travis build status](https://travis-ci.org/leonadler/lightweight-di.svg)](https://travis-ci.org/leonadler/lightweight-di/)
 
 A dependency injection library for node and the browser, based on [Angulars DI](https://angular.io/guide/architecture#dependency-injection).
 Optimized for use via [TypeScript](https://github.com/Microsoft/TypeScript#readme) or [babel](https://github.com/babel/babel#readme) [decorators](https://babeljs.io/docs/plugins/transform-decorators/).
