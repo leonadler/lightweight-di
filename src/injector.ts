@@ -208,7 +208,7 @@ function validateProviders(providers: Provider<any>[]) {
 
 function throwOnCircularDependencies(dependencies: any[], factories: Map<any, Factory>, dependents: any[]): void {
     for (const dependency of dependencies) {
-        if (dependents.includes(dependency)) {
+        if (dependents.indexOf(dependency) >= 0) {
             throw new InjectionError(`Circular dependency: "${tokenName(dependency)}" is required by one of its dependencies.`, dependency);
         }
 

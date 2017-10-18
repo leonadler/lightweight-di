@@ -4,19 +4,19 @@ export interface Type<T> extends Function {
     new(...args: any[]): T;
 }
 
-interface UseClassProvider<T> {
+export interface UseClassProvider<T> {
     provide: InjectionToken<T> | Type<T>;
     useClass: Type<any>;
     dependencies?: any[];
 }
 
-interface UseFactoryProvider<T> {
+export interface UseFactoryProvider<T> {
     provide: InjectionToken<T> | Type<T>;
     useFactory: (...args: any[]) => any;
     dependencies?: any[];
 }
 
-interface UseValueProvider<T> {
+export interface UseValueProvider<T> {
     provide: InjectionToken<T> | Type<T>;
     useValue: any;
 }

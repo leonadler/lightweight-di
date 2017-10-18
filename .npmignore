@@ -1,3 +1,5 @@
-docs
-node_modules
-**/*.ts
+*
+!dist/**/*
+!LICENSE
+!README.md
+!package.json

@@ -2,6 +2,9 @@
     "extends": "./tsconfig.json",
     "exclude": [
         "node_modules",
+        "dist",
+        "dist/**/*",
+        "docs",
         "src/**/*.spec.*"
     ]
 }

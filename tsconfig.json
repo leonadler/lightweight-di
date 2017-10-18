@@ -1,16 +1,22 @@
 {
     "compilerOptions": {
+        "declaration": true,
         "emitDecoratorMetadata": true,
         "experimentalDecorators": true,
         "importHelpers": true,
+        "lib": [
+            "es2015"
+        ],
         "module": "commonjs",
         "noImplicitAny": true,
         "outDir": "dist",
         "rootDir": "src",
         "strict": true,
-        "target": "es2016"
+        "sourceMap": true,
+        "target": "es5"
     },
     "exclude": [
+        "docs",
         "node_modules"
     ]
 }
