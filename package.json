@@ -1,9 +1,9 @@
 {
   "name": "lightweight-di",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Lightweight dependency injection for TypeScript and JavaScript",
   "main": "dist/index.js",
-  "declaration": "dist/index.d.ts",
+  "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "prepare": "npm run build",

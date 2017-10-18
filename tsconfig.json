@@ -4,16 +4,13 @@
         "emitDecoratorMetadata": true,
         "experimentalDecorators": true,
         "importHelpers": true,
-        "lib": [
-            "es2015"
-        ],
         "module": "commonjs",
         "noImplicitAny": true,
         "outDir": "dist",
         "rootDir": "src",
         "strict": true,
         "sourceMap": true,
-        "target": "es5"
+        "target": "es2016"
     },
     "exclude": [
         "docs",
