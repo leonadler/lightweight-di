@@ -49,9 +49,9 @@ export class Injector {
         this.resolved.set(token, value);
     }
 
-    get<T>(token: Type<T>): T;
+    get<T extends Type<any>>(token: T): InstanceType<T>;
     get<T>(token: InjectionToken<T>): T;
-    get<T, U>(token: Type<T>, notFoundValue: U): T | U;
+    get<T extends Type<any>, U>(token: T, notFoundValue: U): InstanceType<T> | U;
     get<T, U>(token: InjectionToken<T>, notFoundValue: U): T | U;
     get(token: any, notFoundValue?: any): any {
         if (this.resolved.has(token)) {

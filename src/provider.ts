@@ -1,6 +1,6 @@
 import { InjectionToken } from './injection-token';
 
-export interface Type<T> extends Function {
+export interface Type<T> {
     new(...args: any[]): T;
 }
 
