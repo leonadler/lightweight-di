@@ -1,35 +1,32 @@
 {
-    "version": "0.1.0",
+    "version": "2.0.0",
     "tasks": [
         {
-            "taskName": "build",
+            "label": "build",
             "command": "node",
-            "isBuildCommand": true,
             "args": [
                 "node_modules/typescript/bin/tsc",
                 "-p",
                 "tsconfig.build.json"
             ],
-            "showOutput": "silent",
-            "problemMatcher": "$tsc"
+            "problemMatcher": "$tsc",
+            "group": "build"
         },
         {
-            "taskName": "watch",
+            "label": "watch",
             "command": "node",
-            "isBackground": true,
             "args": [
                 "node_modules/typescript/bin/tsc",
                 "-p",
                 "tsconfig.build.json",
                 "-w"
             ],
-            "showOutput": "silent",
+            "isBackground": true,
             "problemMatcher": "$tsc-watch"
         },
         {
-            "taskName": "run tests",
+            "label": "run tests",
             "command": "node",
-            "isTestCommand": true,
             "args": [
                 "node_modules/mocha/bin/mocha",
                 "--require",
@@ -41,7 +38,6 @@
                 "--no-colors",
                 "src/**/*.spec.ts"
             ],
-            "showOutput": "never",
             "problemMatcher": {
                 "owner": "mocha",
                 "fileLocation": [
@@ -63,18 +59,12 @@
                         "column": 4
                     }
                 ]
-            }
+            },
+            "group": "test"
         },
         {
-            "taskName": "watch tests",
+            "label": "watch tests",
             "command": "node",
-            "isBackground": true,
-            "showOutput": "silent",
-            "options": {
-                "env": {
-                    "TS_NODE_CACHE": "false"
-                }
-            },
             "args": [
                 "node_modules/onchange/cli",
                 "--initial",
@@ -92,7 +82,9 @@
                 "tap",
                 "--no-colors",
                 "src/**/*.spec.ts"
-            ]
+            ],
+            "isBackground": true,
+            "problemMatcher": []
         }
     ]
 }
